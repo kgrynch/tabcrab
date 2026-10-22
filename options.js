@@ -1,11 +1,17 @@
 // Saves options to chrome.storage
+const DEFAULT_GROUP_ALIASES = `# Example aliases (one group per line)
+# Format: Group Name = domain1.com, domain2.com, *.domain3.com
+Formative = app.formative.com, goformative.com
+Learning = app.canvas.com, *.instructure.com`;
+
 const saveOptions = () => {
     const showTabCount = document.getElementById('show-tab-count').checked;
+    const advancedMode = document.getElementById('advanced-mode').checked;
+    const groupAliases = document.getElementById('group-aliases').value;
 
     chrome.storage.local.set(
-        { showTabCount: showTabCount },
+        { showTabCount, advancedMode, groupAliases },
         () => {
-            // Update status to let user know options were saved.
             const status = document.getElementById('status');
             status.textContent = 'Options saved!';
             status.style.opacity = 1;
@@ -16,16 +22,22 @@ const saveOptions = () => {
     );
 };
 
-// Restores select box and checkbox state using the preferences
-// stored in chrome.storage.
 const restoreOptions = () => {
     chrome.storage.local.get(
-        { showTabCount: true }, // Default value
+        {
+            showTabCount: true,
+            advancedMode: false,
+            groupAliases: DEFAULT_GROUP_ALIASES
+        },
         (items) => {
             document.getElementById('show-tab-count').checked = items.showTabCount;
+            document.getElementById('advanced-mode').checked = items.advancedMode;
+            document.getElementById('group-aliases').value = items.groupAliases || DEFAULT_GROUP_ALIASES;
         }
     );
 };
 
 document.addEventListener('DOMContentLoaded', restoreOptions);
 document.getElementById('show-tab-count').addEventListener('change', saveOptions);
+document.getElementById('advanced-mode').addEventListener('change', saveOptions);
+document.getElementById('group-aliases').addEventListener('input', saveOptions);
