@@ -15,16 +15,27 @@
         </div>
 
         <div class="space-y-6">
-            <!-- General Options -->
             <div>
                 <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">General</h2>
                 <label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer">
                     <input type="checkbox" id="show-tab-count" class="h-5 w-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
                     <span class="text-slate-700">Show total tab count on the extension icon</span>
                 </label>
+                <label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer mt-3">
+                    <input type="checkbox" id="advanced-mode" class="h-5 w-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                    <span class="text-slate-700">Enable advanced features</span>
+                </label>
             </div>
 
-            <!-- Keyboard Shortcuts -->
+            <div>
+                <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Smart Group Rules</h2>
+                <p class="text-slate-600 mb-3 text-sm">
+                    Define custom group aliases. One line per group, using:
+                    <code class="bg-slate-200 px-1 py-0.5 rounded">Group Name = domain1.com, domain2.com, *.example.com</code>
+                </p>
+                <textarea id="group-aliases" rows="8" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none text-sm" placeholder="Formative = app.formative.com, goformative.com"></textarea>
+            </div>
+
             <div>
                 <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Keyboard Shortcuts</h2>
                 <p class="text-slate-600 mb-3">
