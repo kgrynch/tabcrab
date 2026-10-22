@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tab Crab Options</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body class="bg-slate-50 p-6 font-sans">
+
+    <div class="max-w-md mx-auto bg-white p-8 rounded-xl shadow-lg">
+        <div class="flex items-center mb-6">
+            <img src="icons/icon48.png" alt="Tab Crab Icon" class="w-10 h-10 mr-4">
+            <h1 class="text-3xl font-bold text-slate-800">Tab Crab Options</h1>
+        </div>
+
+        <div class="space-y-6">
+            <!-- General Options -->
+            <div>
+                <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">General</h2>
+                <label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <input type="checkbox" id="show-tab-count" class="h-5 w-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                    <span class="text-slate-700">Show total tab count on the extension icon</span>
+                </label>
+            </div>
+
+            <!-- Keyboard Shortcuts -->
+            <div>
+                <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Keyboard Shortcuts</h2>
+                <p class="text-slate-600 mb-3">
+                    You can manage these shortcuts by navigating to 
+                    <a href="chrome://extensions/shortcuts" target="_blank" class="text-cyan-600 hover:underline font-medium">chrome://extensions/shortcuts</a>.
+                </p>
+                <div class="text-sm text-slate-700 space-y-2">
+                    <p><strong>Open Tab Crab:</strong> <kbd class="bg-slate-200 px-2 py-1 rounded">Ctrl+Shift+K</kbd></p>
+                    <p><strong>Gather All Tabs:</strong> <kbd class="bg-slate-200 px-2 py-1 rounded">Ctrl+Shift+L</kbd></p>
+                    <p><strong>Sort Current Window:</strong> <kbd class="bg-slate-200 px-2 py-1 rounded">Ctrl+Shift+J</kbd></p>
+                </div>
+            </div>
+        </div>
+
+        <div id="status" class="mt-6 text-center text-green-600 font-medium opacity-0 transition-opacity">
+            Options saved!
+        </div>
+    </div>
+
+    <script src="options.js"></script>
+</body>
+</html>

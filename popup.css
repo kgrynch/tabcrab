@@ -1,0 +1,124 @@
+/* FIX: Remove default margin to fix empty space at the top */
+body {
+    margin: 0;
+    font-family: sans-serif;
+    width: 380px;
+    background-color: #f4f4f9;
+    padding: 8px;
+}
+
+.header {
+    padding: 10px 16px;
+    background-color: #fff;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+h1 {
+    font-size: 18px;
+    margin: 0;
+    margin-bottom: 8px;
+}
+
+/* NEW: Styling for the filter toggle */
+.filters {
+    display: flex;
+    align-items: center;
+    font-size: 12px;
+}
+
+#window-toggle {
+    margin-left: 8px;
+}
+
+#tab-list-container {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.tab-group {
+    background-color: #fff;
+    border-radius: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+.group-header {
+    display: flex;
+    align-items: center;
+    padding: 10px;
+    border-bottom: 1px solid #eee;
+}
+
+.group-arrow {
+    width: 16px;
+    height: 16px;
+    margin-right: 8px;
+    transition: transform 0.2s ease;
+}
+
+.group-arrow.collapsed {
+    transform: rotate(-90deg);
+}
+
+.color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+.tab-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.tab-item {
+    display: flex;
+    align-items: center;
+    padding: 8px 16px;
+    border-bottom: 1px solid #f0f0f0;
+    background-color: #fff;
+    
+    /* FIX: Make the entire item draggable and easier to grab */
+    cursor: grab;
+    user-select: none; /* Prevents text selection while dragging */
+}
+
+/* NEW: Visual feedback for the item being dragged */
+.tab-item.dragging {
+    opacity: 0.5;
+}
+
+
+.tab-item:last-child {
+    border-bottom: none;
+}
+
+/* This is for ungrouped tabs that are not part of a .tab-group */
+.tab-item.ungrouped {
+    border-radius: 8px;
+    margin-bottom: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+}
+
+
+.favicon {
+    width: 16px;
+    height: 16px;
+    margin-right: 12px;
+}
+
+.tab-title {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    font-size: 14px;
+}
+
+/* NEW: Hides the arrow on single, ungrouped tabs */
+.tab-item.is-single .group-arrow {
+    visibility: hidden; /* Use visibility to keep alignment */
+}
