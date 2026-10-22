@@ -1,7 +1,7 @@
 {
     "manifest_version": 3,
     "name": "Tab Crab",
-    "version": "3.2",
+    "version": "4.0",
     "description": "Manage tabs from all windows in one place. Automatically groups by website, helping you consolidate, sort, and navigate with ease.",
     "permissions": [
         "tabs",
@@ -48,4 +48,3 @@
         }
     }
 }
-
