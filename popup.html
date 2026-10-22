@@ -15,6 +15,14 @@
                 <img src="icons/icon48.png" class="w-5 h-5 mr-2" alt="Tab Crab Icon">
                 <h1 class="font-bold text-slate-800">Tab Crab</h1>
                 <div class="flex-grow"></div>
+                <button id="save-groups-btn" title="Save the current groups for later" class="action-btn-text hidden">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2Z"/>
+                        <path d="M17 21v-8H7v8"/>
+                        <path d="M7 3v5h8"/>
+                    </svg>
+                    <span>Save</span>
+                </button>
                 <button id="smart-group-btn" title="Create smart groups from saved rule aliases" class="action-btn-text hidden">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M3 12h18"/>
@@ -86,6 +94,7 @@
         </header>
         <div class="flex-grow p-3 overflow-y-auto">
             <div id="native-groups-list" class="space-y-2 mb-3"></div>
+            <div id="saved-groups-list" class="space-y-2 mb-3"></div>
             <div id="tab-list"></div>
             <div id="empty-state" class="hidden text-center text-slate-500 py-10">
                 <p class="font-medium">The beach is clear!</p>

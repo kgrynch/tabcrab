@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
     const tabListContainer = document.getElementById('tab-list');
     const nativeGroupsContainer = document.getElementById('native-groups-list');
+    const savedGroupsContainer = document.getElementById('saved-groups-list');
     const emptyState = document.getElementById('empty-state');
     const consolidateBtn = document.getElementById('consolidate-btn');
     const sortBtn = document.getElementById('sort-btn');
@@ -10,6 +11,105 @@ document.addEventListener('DOMContentLoaded', () => {
     const dedupeBtn = document.getElementById('dedupe-btn');
     const autoGroupBtn = document.getElementById('auto-group-btn');
     const smartGroupBtn = document.getElementById('smart-group-btn');
+    const saveGroupsBtn = document.getElementById('save-groups-btn');
+
+    const getSavedGroups = async () => {
+        const { savedTabGroups = [] } = await chrome.storage.local.get(['savedTabGroups']);
+        return savedTabGroups;
+    };
+
+    const setSavedGroups = async (groups) => {
+        await chrome.storage.local.set({ savedTabGroups: groups });
+    };
+
+    const buildSavedGroupFromTabs = (name, tabs) => ({
+        id: `saved-${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        name,
+        memberUrls: tabs.map(tab => tab.url).filter(Boolean),
+        isLocked: false,
+        createdAt: Date.now()
+    });
+
+    const renderSavedGroups = async (allTabs) => {
+        savedGroupsContainer.innerHTML = '';
+        const savedGroups = await getSavedGroups();
+
+        for (const group of savedGroups) {
+            const groupTabs = allTabs.filter(tab => {
+                if (!tab || !tab.url) return false;
+                return group.memberUrls.includes(tab.url) || (group.memberUrls || []).includes(tab.url);
+            });
+
+            const groupEl = document.createElement('div');
+            groupEl.className = 'group bg-cyan-50 rounded-lg shadow-sm overflow-hidden collapsible open';
+
+            const header = document.createElement('div');
+            header.className = 'group-header flex items-center p-2 cursor-pointer bg-cyan-100';
+
+            const title = document.createElement('span');
+            title.className = 'font-semibold text-slate-700 truncate mx-2';
+            title.textContent = group.name;
+
+            const state = document.createElement('span');
+            state.className = 'text-xs font-medium bg-slate-200 text-slate-600 rounded-full px-2 py-0.5';
+            state.textContent = `${groupTabs.length} open`;
+
+            const lockBtn = document.createElement('button');
+            lockBtn.className = 'action-btn-text px-2 py-1 ml-2';
+            lockBtn.textContent = group.isLocked ? 'Unlock' : 'Lock';
+            lockBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const groups = await getSavedGroups();
+                const next = groups.map(item => item.id === group.id ? { ...item, isLocked: !item.isLocked } : item);
+                await setSavedGroups(next);
+                renderUI();
+            });
+
+            const restoreBtn = document.createElement('button');
+            restoreBtn.className = 'action-btn-text px-2 py-1';
+            restoreBtn.textContent = 'Restore';
+            restoreBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const allOpenTabs = await chrome.tabs.query({});
+                const ids = allOpenTabs
+                    .filter(tab => group.memberUrls.includes(tab.url))
+                    .map(tab => tab.id);
+                if (ids.length > 1) {
+                    const newGroupId = await chrome.tabs.group({ tabIds: ids });
+                    await chrome.tabGroups.update(newGroupId, { title: group.name });
+                }
+                renderUI();
+            });
+
+            const deleteBtn = document.createElement('button');
+            deleteBtn.className = 'action-btn-text px-2 py-1';
+            deleteBtn.textContent = 'Remove';
+            deleteBtn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const groups = await getSavedGroups();
+                await setSavedGroups(groups.filter(item => item.id !== group.id));
+                renderUI();
+            });
+
+            header.append(title, state, lockBtn, restoreBtn, deleteBtn);
+
+            const items = document.createElement('div');
+            items.className = 'tab-items';
+
+            if (groupTabs.length === 0) {
+                const empty = document.createElement('div');
+                empty.className = 'p-2 text-xs text-slate-500';
+                empty.textContent = 'No matching tabs are open right now.';
+                items.appendChild(empty);
+            } else {
+                groupTabs.forEach(tab => items.appendChild(createTabItem(tab, false)));
+            }
+
+            groupEl.appendChild(header);
+            groupEl.appendChild(items);
+            savedGroupsContainer.appendChild(groupEl);
+        }
+    };
 
     const renderUI = async () => {
         const settings = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode', 'groupAliases']);
@@ -19,6 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
         consolidateBtn.disabled = !isAllTabsView;
         consolidateBtn.style.opacity = isAllTabsView ? '1' : '0.5';
         smartGroupBtn.classList.toggle('hidden', !advancedMode);
+        saveGroupsBtn.classList.toggle('hidden', !advancedMode);
 
         const queryInfo = isAllTabsView ? {} : { currentWindow: true };
         const allTabs = await chrome.tabs.query(queryInfo);
@@ -28,6 +129,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         if (allTabs.length === 0) {
             emptyState.classList.remove('hidden');
+            savedGroupsContainer.innerHTML = '';
             return;
         }
         emptyState.classList.add('hidden');
@@ -87,8 +189,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (tabs.length === 1) {
                 const singleTab = tabs[0];
-                const tabItemEl = createTabItem(singleTab, true);
-                tabListContainer.appendChild(tabItemEl);
+                tabListContainer.appendChild(createTabItem(singleTab, true));
             } else {
                 const groupEl = createCollapsibleGroup({
                     id: `domain-${domain}`,
@@ -102,6 +203,8 @@ document.addEventListener('DOMContentLoaded', () => {
                 tabListContainer.appendChild(groupEl);
             }
         }
+
+        await renderSavedGroups(allTabs);
     };
 
     function createTabItem(tab, isStandalone = false) {
@@ -163,7 +266,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function createCollapsibleGroup({ id, title, itemCount, type, color, iconUrl }) {
         const groupWrapper = document.createElement('div');
-        groupWrapper.className = `group bg-slate-100 rounded-lg shadow-sm overflow-hidden collapsible`;
+        groupWrapper.className = 'group bg-slate-100 rounded-lg shadow-sm overflow-hidden collapsible';
 
         const header = document.createElement('div');
         header.className = `group-header flex items-center p-2 cursor-pointer ${type === 'native' ? 'bg-slate-200' : 'bg-slate-100'}`;
@@ -244,6 +347,33 @@ document.addEventListener('DOMContentLoaded', () => {
         renderUI();
     });
 
+    saveGroupsBtn.addEventListener('click', async () => {
+        const settings = await chrome.storage.local.get(['advancedMode']);
+        if (!settings.advancedMode) return;
+
+        const allTabs = await chrome.tabs.query({});
+        const groups = [];
+
+        const currentWindowId = (await chrome.windows.getCurrent({ populate: false })).id;
+        const nativeGroups = await chrome.tabGroups.query({ windowId: currentWindowId });
+        for (const group of nativeGroups) {
+            const tabs = allTabs.filter(tab => tab.groupId === group.id && tab.url);
+            if (tabs.length > 0) {
+                groups.push(buildSavedGroupFromTabs(group.title || 'Saved Group', tabs));
+            }
+        }
+
+        const byDomain = groupTabsByDomain(allTabs.filter(tab => tab.url && !(tab.groupId > -1)));
+        for (const [domain, tabs] of Object.entries(byDomain)) {
+            if (tabs.length > 0) groups.push(buildSavedGroupFromTabs(domain, tabs));
+        }
+
+        const existing = await getSavedGroups();
+        const merged = [...existing, ...groups].filter(Boolean);
+        await setSavedGroups(merged);
+        renderUI();
+    });
+
     consolidateBtn.addEventListener('click', async () => {
         const currentWindow = await chrome.windows.getCurrent();
         const allTabs = await chrome.tabs.query({});
@@ -318,7 +448,6 @@ document.addEventListener('DOMContentLoaded', () => {
 
     smartGroupBtn.addEventListener('click', async () => {
         const settings = await chrome.storage.local.get(['advancedMode', 'groupAliases']);
-        const aliases = parseGroupAliasText(settings.groupAliases || '');
         const allTabs = await chrome.tabs.query({});
         const grouped = groupTabsByCustomRules(allTabs, settings.groupAliases || '');
 
@@ -469,6 +598,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const data = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode']);
             viewToggle.checked = data.viewModeAllTabs !== false;
             if (smartGroupBtn) smartGroupBtn.classList.toggle('hidden', data.advancedMode !== true);
+            if (saveGroupsBtn) saveGroupsBtn.classList.toggle('hidden', data.advancedMode !== true);
         } catch (e) {
             console.error('Error loading state:', e);
             viewToggle.checked = true;
