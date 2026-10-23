@@ -23,13 +23,13 @@
                     </svg>
                     <span>Save</span>
                 </button>
-                <button id="smart-group-btn" title="Create smart groups from saved rule aliases" class="action-btn-text hidden">
+                <button id="smart-group-btn" title="Apply saved smart-group rules" class="action-btn-text hidden">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <path d="M3 12h18"/>
                         <path d="M12 3v18"/>
                         <circle cx="12" cy="12" r="8"/>
                     </svg>
-                    <span>Smart Group</span>
+                    <span>Apply Rules</span>
                 </button>
                 <button id="auto-group-btn" title="Automatically create tab groups by domain" class="action-btn-text">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -92,10 +92,10 @@
                 </div>
             </div>
         </header>
-        <div class="flex-grow p-3 overflow-y-auto">
-            <div id="native-groups-list" class="space-y-2 mb-3"></div>
-            <div id="saved-groups-list" class="space-y-2 mb-3"></div>
-            <div id="tab-list"></div>
+        <div class="flex-grow p-3 overflow-y-auto main-scroll">
+            <div id="native-groups-list" class="group-stack"></div>
+            <div id="saved-groups-list" class="group-stack hidden"></div>
+            <div id="tab-list" class="group-stack"></div>
             <div id="empty-state" class="hidden text-center text-slate-500 py-10">
                 <p class="font-medium">The beach is clear!</p>
                 <p class="text-sm">No open tabs found.</p>

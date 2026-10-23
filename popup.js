@@ -31,14 +31,12 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     const renderSavedGroups = async (allTabs) => {
-        savedGroupsContainer.innerHTML = '';
         const savedGroups = await getSavedGroups();
+        savedGroupsContainer.innerHTML = '';
+        savedGroupsContainer.classList.toggle('hidden', savedGroups.length === 0);
 
         for (const group of savedGroups) {
-            const groupTabs = allTabs.filter(tab => {
-                if (!tab || !tab.url) return false;
-                return group.memberUrls.includes(tab.url) || (group.memberUrls || []).includes(tab.url);
-            });
+            const groupTabs = allTabs.filter(tab => tab && tab.url && group.memberUrls.includes(tab.url));
 
             const groupEl = document.createElement('div');
             groupEl.className = 'group bg-cyan-50 rounded-lg shadow-sm overflow-hidden collapsible open';
@@ -130,6 +128,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (allTabs.length === 0) {
             emptyState.classList.remove('hidden');
             savedGroupsContainer.innerHTML = '';
+            savedGroupsContainer.classList.add('hidden');
             return;
         }
         emptyState.classList.add('hidden');
