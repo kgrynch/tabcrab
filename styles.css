@@ -5,28 +5,25 @@ html {
 
 body {
     font-family: 'Inter', sans-serif;
-    border-radius: 0.75rem; /* rounded-xl */
+    border-radius: 0.75rem;
     margin: 0;
     width: 440px;
     height: 500px;
-    background-color: #f8fafc; /* bg-slate-50 */
-    color: #1e293b; /* text-slate-800 */
+    background-color: #f8fafc;
+    color: #1e293b;
 }
 
-/* --- CRITICAL FIX for Icon Sizing --- */
 img {
-    width: 1rem;  /* 16px */
-    height: 1rem; /* 16px */
-    flex-shrink: 0; /* Prevents icons from shrinking in flex containers */
+    width: 1rem;
+    height: 1rem;
+    flex-shrink: 0;
 }
-/* Specific override for the main header icon */
+
 header > div > img {
-    width: 1.25rem; /* 20px */
-    height: 1.25rem; /* 20px */
+    width: 1.25rem;
+    height: 1.25rem;
 }
 
-
-/* --- Layout Containers & Sizing --- */
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
 .flex-grow { flex-grow: 1; }
@@ -65,7 +62,6 @@ header > div > img {
 .h-5 { height: 1.25rem; }
 .w-full { width: 100%; }
 
-/* --- Typography --- */
 .font-bold { font-weight: 700; }
 .font-medium { font-weight: 500; }
 .font-semibold { font-weight: 600; }
@@ -81,7 +77,6 @@ header > div > img {
 .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 a.hover\:underline:hover { text-decoration: underline; }
 
-/* --- Backgrounds & Borders --- */
 .bg-white { background-color: #ffffff; }
 .bg-slate-100 { background-color: #f1f5f9; }
 .bg-slate-200 { background-color: #e2e8f0; }
@@ -117,7 +112,6 @@ a.hover\:underline:hover { text-decoration: underline; }
 .top-1\/2 { top: 50%; }
 .-translate-y-1\/2 { transform: translateY(-50%); }
 
-/* --- UPDATED: Smaller Toggle Switch --- */
 .toggle-switch-label {
     position: relative;
     display: inline-flex;
@@ -125,10 +119,10 @@ a.hover\:underline:hover { text-decoration: underline; }
     cursor: pointer;
 }
 .toggle-switch {
-    width: 36px; /* w-9 */
-    height: 20px; /* h-5 */
-    background-color: #e2e8f0; /* bg-slate-200 */
-    border-radius: 9999px; /* rounded-full */
+    width: 36px;
+    height: 20px;
+    background-color: #e2e8f0;
+    border-radius: 9999px;
     transition: background-color 0.2s ease-in-out;
 }
 .toggle-switch::after {
@@ -136,36 +130,35 @@ a.hover\:underline:hover { text-decoration: underline; }
     position: absolute;
     top: 2px;
     left: 2px;
-    width: 16px; /* w-4 */
-    height: 16px; /* h-4 */
+    width: 16px;
+    height: 16px;
     background-color: white;
     border-radius: 9999px;
     transition: transform 0.2s ease-in-out;
 }
 .toggle-switch-label input:checked + .toggle-switch {
-    background-color: #0891b2; /* peer-checked:bg-cyan-600 */
+    background-color: #0891b2;
 }
 .toggle-switch-label input:checked + .toggle-switch::after {
     transform: translateX(16px);
 }
 
-/* --- Action Buttons with Text --- */
 .action-btn-text {
     display: inline-flex;
     align-items: center;
     padding: 0.25rem 0.5rem;
     border-radius: 0.5rem;
-    color: #64748b; /* text-slate-500 */
-    font-size: 0.875rem; /* text-sm */
-    font-weight: 500; /* font-medium */
+    color: #64748b;
+    font-size: 0.875rem;
+    font-weight: 500;
     transition: all 150ms;
     border: none;
     background: none;
     cursor: pointer;
 }
 .action-btn-text:hover {
-    background-color: #f1f5f9; /* hover:bg-slate-100 */
-    color: #0891b2; /* hover:text-cyan-600 */
+    background-color: #f1f5f9;
+    color: #0891b2;
 }
 .action-btn-text svg {
     margin-right: 0.25rem;
@@ -176,14 +169,13 @@ a.hover\:underline:hover { text-decoration: underline; }
     box-shadow: 0 0 0 2px #fff, 0 0 0 4px #22d3ee;
 }
 
-/* --- Re-scoping old action-btn for icon-only buttons --- */
-.action-btn { 
+.action-btn {
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    padding: 0.5rem; 
-    border-radius: 0.5rem; 
-    color: #64748b; 
+    padding: 0.5rem;
+    border-radius: 0.5rem;
+    color: #64748b;
     transition: all 150ms;
     border: none;
     background: none;
@@ -192,7 +184,6 @@ a.hover\:underline:hover { text-decoration: underline; }
 .action-btn:hover { background-color: #f1f5f9; color: #0891b2; }
 .action-btn:focus { outline: 2px solid transparent; outline-offset: 2px; box-shadow: 0 0 0 2px #fff, 0 0 0 4px #22d3ee; }
 
-/* --- Custom Classes (from old file) --- */
 .native-group-color { width: 1rem; height: 1rem; border-radius: 9999px; flex-shrink: 0; }
 .bg-group-grey { background-color: #5f6368; }
 .bg-group-blue { background-color: #1a73e8; }
@@ -210,18 +201,16 @@ a.hover\:underline:hover { text-decoration: underline; }
 .removing { transition: opacity 0.3s ease-out, transform 0.3s ease-out; opacity: 0; transform: translateX(-20px); }
 
 #tab-list > .tab-item, #tab-list > .group { margin-bottom: 8px; }
-
 .tab-item { user-select: none; -webkit-user-select: none; }
 
-/* --- NEW STYLES for the Close Button --- */
 .close-btn {
-    display: none; /* Hidden by default */
+    display: none;
     align-items: center;
     justify-content: center;
-    margin-left: 0.5rem; /* ml-2 */
-    padding: 0.25rem; /* p-1 */
-    border-radius: 9999px; /* rounded-full */
-    color: #94a3b8; /* text-slate-400 */
+    margin-left: 0.5rem;
+    padding: 0.25rem;
+    border-radius: 9999px;
+    color: #94a3b8;
     background: none;
     border: none;
     cursor: pointer;
@@ -229,29 +218,42 @@ a.hover\:underline:hover { text-decoration: underline; }
 }
 
 .tab-item:hover .close-btn {
-    display: inline-flex; /* Show on hover */
+    display: inline-flex;
 }
 
 .close-btn:hover {
-    color: #ef4444; /* hover:text-red-500 */
-    background-color: #f1f5f9; /* hover:bg-slate-100 */
+    color: #ef4444;
+    background-color: #f1f5f9;
 }
 
-/* --- NEW STYLES for Labeled Toggle Switch --- */
 .toggle-container {
     display: flex;
     align-items: center;
-    gap: 0.5rem; /* space-x-2 */
+    gap: 0.5rem;
 }
 .toggle-label {
-    font-size: 0.75rem; /* text-xs */
-    font-weight: 500; /* font-medium */
-    color: #64748b; /* text-slate-500 */
+    font-size: 0.75rem;
+    font-weight: 500;
+    color: #64748b;
     transition: color 0.2s ease-in-out;
 }
-/* Style for the active label */
 .toggle-switch-label input:not(:checked) ~ .toggle-label-all,
 .toggle-switch-label input:checked ~ .toggle-label {
-    color: #0891b2; /* text-cyan-600 */
+    color: #0891b2;
 }
 
+.group-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.main-scroll {
+    max-height: 390px;
+}
+
+@media (max-width: 440px) {
+    body {
+        width: 100vw;
+    }
+}
