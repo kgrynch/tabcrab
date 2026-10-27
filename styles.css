@@ -195,8 +195,15 @@ a.hover\:underline:hover { text-decoration: underline; }
 .bg-group-cyan { background-color: #007b83; }
 .bg-group-orange { background-color: #e8710a; }
 
-.group.collapsible .tab-items { max-height: 0; overflow: hidden; transition: max-height 0.3s ease-in-out; }
-.group.collapsible.open .tab-items { max-height: 500px; }
+.group.collapsible .tab-items {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease-in-out;
+}
+.group.collapsible.open .tab-items {
+    max-height: 500px;
+    overflow-y: auto;
+}
 
 .removing { transition: opacity 0.3s ease-out, transform 0.3s ease-out; opacity: 0; transform: translateX(-20px); }
 

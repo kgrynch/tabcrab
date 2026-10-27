@@ -30,6 +30,26 @@ document.addEventListener('DOMContentLoaded', () => {
         createdAt: Date.now()
     });
 
+    const getTabBucketLabel = (tabUrl) => {
+        if (!tabUrl) return 'Other pages';
+
+        try {
+            const parsed = new URL(tabUrl);
+            if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+                return parsed.hostname.replace(/^www\./, '').toLowerCase();
+            }
+
+            const scheme = (parsed.protocol || '').replace(/:$/, '') || 'Other';
+            if (scheme === 'chrome') return 'Chrome pages';
+            if (scheme === 'chrome-extension') return 'Extensions';
+            if (scheme === 'file') return 'File pages';
+            if (scheme === 'about') return 'About pages';
+            return `${scheme.charAt(0).toUpperCase()}${scheme.slice(1)} pages`;
+        } catch {
+            return 'Other pages';
+        }
+    };
+
     const renderSavedGroups = async (allTabs) => {
         const savedGroups = await getSavedGroups();
         savedGroupsContainer.innerHTML = '';
@@ -110,9 +130,10 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderUI = async () => {
-        const settings = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode', 'groupAliases']);
+        const settings = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode', 'groupAliases', 'expandAll']);
         const isAllTabsView = viewToggle.checked;
         const advancedMode = settings.advancedMode === true;
+        const expandAll = settings.expandAll === true;
 
         consolidateBtn.disabled = !isAllTabsView;
         consolidateBtn.style.opacity = isAllTabsView ? '1' : '0.5';
@@ -144,7 +165,6 @@ document.addEventListener('DOMContentLoaded', () => {
             groupTabs.forEach(t => tabsInNativeGroups.add(t.id));
 
             const groupEl = createCollapsibleGroup({
-                id: group.id,
                 title: group.title || 'Untitled Group',
                 itemCount: groupTabs.length,
                 type: 'native',
@@ -156,7 +176,7 @@ document.addEventListener('DOMContentLoaded', () => {
             nativeGroupsContainer.appendChild(groupEl);
         }
 
-        const tabsNotInGroups = allTabs.filter(tab => !tabsInNativeGroups.has(tab.id));
+        const tabsNotInGroups = allTabs.filter(tab => tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE && !tabsInNativeGroups.has(tab.id));
         const customGroups = advancedMode ? groupTabsByCustomRules(tabsNotInGroups, settings.groupAliases || '') : {};
         const customTabIds = new Set();
 
@@ -164,19 +184,14 @@ document.addEventListener('DOMContentLoaded', () => {
             if (tabs.length === 0) continue;
             tabs.forEach(tab => customTabIds.add(tab.id));
 
-            if (tabs.length === 1) {
-                tabListContainer.appendChild(createTabItem(tabs[0], true));
-            } else {
-                const groupEl = createCollapsibleGroup({
-                    id: `custom-${groupName}`,
-                    title: groupName,
-                    itemCount: tabs.length,
-                    type: 'custom'
-                });
-                const itemsContainer = groupEl.querySelector('.tab-items');
-                tabs.forEach(tab => itemsContainer.appendChild(createTabItem(tab, false)));
-                tabListContainer.appendChild(groupEl);
-            }
+            const groupEl = createCollapsibleGroup({
+                title: groupName,
+                itemCount: tabs.length,
+                type: 'custom'
+            });
+            const itemsContainer = groupEl.querySelector('.tab-items');
+            tabs.forEach(tab => itemsContainer.appendChild(createTabItem(tab, false)));
+            tabListContainer.appendChild(groupEl);
         }
 
         const remainingTabs = tabsNotInGroups.filter(tab => !customTabIds.has(tab.id));
@@ -186,12 +201,11 @@ document.addEventListener('DOMContentLoaded', () => {
         for (const domain of sortedDomains) {
             const tabs = tabsByDomain[domain];
 
-            if (tabs.length === 1) {
+            if (tabs.length === 1 && (tabs[0].url || '').startsWith('http:') || (tabs.length === 1 && (tabs[0].url || '').startsWith('https:'))) {
                 const singleTab = tabs[0];
                 tabListContainer.appendChild(createTabItem(singleTab, true));
             } else {
                 const groupEl = createCollapsibleGroup({
-                    id: `domain-${domain}`,
                     title: domain,
                     itemCount: tabs.length,
                     type: 'domain',
@@ -203,41 +217,80 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
+        document.querySelectorAll('.group.collapsible').forEach(group => {
+            group.classList.toggle('open', expandAll);
+        });
+
         await renderSavedGroups(allTabs);
     };
 
+    function createCloseButton() {
+        const button = document.createElement('button');
+        button.className = 'close-btn';
+        button.title = 'Close Tab';
+
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+        svg.setAttribute('width', '16');
+        svg.setAttribute('height', '16');
+        svg.setAttribute('viewBox', '0 0 24 24');
+        svg.setAttribute('fill', 'none');
+        svg.setAttribute('stroke', 'currentColor');
+        svg.setAttribute('stroke-width', '2.5');
+        svg.setAttribute('stroke-linecap', 'round');
+        svg.setAttribute('stroke-linejoin', 'round');
+
+        const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path1.setAttribute('d', 'M18 6 6 18');
+        const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path2.setAttribute('d', 'm6 6 12 12');
+
+        svg.append(path1, path2);
+        button.appendChild(svg);
+        return button;
+    }
+
     function createTabItem(tab, isStandalone = false) {
         const item = document.createElement('div');
-        item.dataset.tabId = tab.id;
-        item.dataset.windowId = tab.windowId;
-
-        const closeButtonHTML = `
-            <button class="close-btn" title="Close Tab">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <path d="M18 6 6 18"/>
-                    <path d="m6 6 12 12"/>
-                </svg>
-            </button>
-        `;
+        item.dataset.tabId = String(tab.id);
+        item.dataset.windowId = String(tab.windowId);
 
         if (isStandalone) {
             item.className = 'tab-item flex items-center p-2 bg-white hover:bg-slate-50 cursor-pointer rounded-lg shadow-sm overflow-hidden mb-2';
-            const domain = safeHostname(tab.url);
-            item.innerHTML = `
-                <img src="${tab.favIconUrl || getFaviconUrl(tab.url)}" class="w-4 h-4 mr-2 flex-shrink-0" alt="favicon">
-                <div class="flex-grow overflow-hidden">
-                    <div class="font-semibold text-slate-700 truncate">${domain}</div>
-                    <div class="text-xs text-slate-500 truncate">${tab.title}</div>
-                </div>
-                ${closeButtonHTML}
-            `;
+
+            const favicon = document.createElement('img');
+            favicon.src = tab.favIconUrl || getFaviconUrl(tab.url);
+            favicon.className = 'w-4 h-4 mr-2 flex-shrink-0';
+            favicon.alt = 'favicon';
+
+            const meta = document.createElement('div');
+            meta.className = 'flex-grow overflow-hidden';
+
+            const domain = document.createElement('div');
+            domain.className = 'font-semibold text-slate-700 truncate';
+            domain.textContent = getTabBucketLabel(tab.url) || 'Other pages';
+
+            const title = document.createElement('div');
+            title.className = 'text-xs text-slate-500 truncate';
+            title.textContent = tab.title || '';
+
+            const closeButton = createCloseButton();
+            meta.append(domain, title);
+            item.append(favicon, meta, closeButton);
         } else {
             item.className = 'tab-item flex items-center p-2 pl-4 bg-white hover:bg-slate-50 cursor-pointer border-t border-slate-100 last:border-b-0';
-            item.innerHTML = `
-                <img src="${tab.favIconUrl || getFaviconUrl(tab.url)}" class="w-4 h-4 mr-2 flex-shrink-0" alt="favicon">
-                <span class="truncate text-slate-700 text-sm pointer-events-none flex-grow">${tab.title}</span>
-                ${closeButtonHTML}
-            `;
+
+            const favicon = document.createElement('img');
+            favicon.src = tab.favIconUrl || getFaviconUrl(tab.url);
+            favicon.className = 'w-4 h-4 mr-2 flex-shrink-0';
+            favicon.alt = 'favicon';
+
+            const title = document.createElement('span');
+            title.className = 'truncate text-slate-700 text-sm pointer-events-none flex-grow';
+            title.textContent = tab.title || '';
+
+            const closeButton = createCloseButton();
+            item.append(favicon, title, closeButton);
         }
 
         item.addEventListener('click', (e) => {
@@ -263,7 +316,7 @@ document.addEventListener('DOMContentLoaded', () => {
         return item;
     }
 
-    function createCollapsibleGroup({ id, title, itemCount, type, color, iconUrl }) {
+    function createCollapsibleGroup({ title, itemCount, type, color, iconUrl }) {
         const groupWrapper = document.createElement('div');
         groupWrapper.className = 'group bg-slate-100 rounded-lg shadow-sm overflow-hidden collapsible';
 
@@ -272,9 +325,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const indicator = document.createElement('span');
         indicator.className = 'indicator';
-        if (type === 'native') indicator.className += ` native-group-color bg-group-${color}`;
-        else if (type === 'custom') indicator.innerHTML = '<span class="native-group-color bg-cyan-100" style="display:inline-block;border-radius:9999px"></span>';
-        else indicator.innerHTML = `<img src="${iconUrl || getFaviconUrl(`http://${title}`)}" class="w-4 h-4 flex-shrink-0" alt="favicon">`;
+        if (type === 'native') {
+            indicator.className += ` native-group-color bg-group-${color}`;
+        } else if (type === 'custom') {
+            indicator.innerHTML = '<span class="native-group-color bg-cyan-100" style="display:inline-block;border-radius:9999px"></span>';
+        } else {
+            const badgeIcon = document.createElement('img');
+            badgeIcon.src = iconUrl || getFaviconUrl(`http://${title}`);
+            badgeIcon.className = 'w-4 h-4 flex-shrink-0';
+            badgeIcon.alt = 'favicon';
+            indicator.appendChild(badgeIcon);
+        }
 
         const titleSpan = document.createElement('span');
         titleSpan.className = 'font-semibold text-slate-700 truncate mx-2';
@@ -330,11 +391,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
             if (parentGroup) {
                 const remainingTabs = parentGroup.querySelectorAll('.tab-item').length;
-                const countSpan = parentGroup.querySelector('.group-header .ml-auto span');
+                const countSpan = parentGroup.querySelector('.group-header .ml-auto');
 
-                if (remainingTabs > 0) {
+                if (remainingTabs > 0 && countSpan) {
                     countSpan.textContent = remainingTabs;
-                } else {
+                } else if (parentGroup) {
                     parentGroup.remove();
                 }
             }
@@ -362,7 +423,7 @@ document.addEventListener('DOMContentLoaded', () => {
             }
         }
 
-        const byDomain = groupTabsByDomain(allTabs.filter(tab => tab.url && !(tab.groupId > -1)));
+        const byDomain = groupTabsByDomain(allTabs.filter(tab => tab.url && tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE));
         for (const [domain, tabs] of Object.entries(byDomain)) {
             if (tabs.length > 0) groups.push(buildSavedGroupFromTabs(domain, tabs));
         }
@@ -374,35 +435,62 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     consolidateBtn.addEventListener('click', async () => {
-        const currentWindow = await chrome.windows.getCurrent();
-        const allTabs = await chrome.tabs.query({});
-        const tabsToMove = allTabs.filter(tab => tab.windowId !== currentWindow.id);
+        try {
+            const currentWindow = await chrome.windows.getCurrent();
+            const allTabs = await chrome.tabs.query({});
+            const tabsToMove = allTabs.filter(tab => tab.windowId !== currentWindow.id && tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE);
+            const sourceWindowIds = [...new Set(allTabs.filter(tab => tab.windowId !== currentWindow.id).map(tab => tab.windowId))];
 
-        if (tabsToMove.length > 0) {
-            const tabIdsToMove = tabsToMove.map(tab => tab.id);
-            await chrome.tabs.move(tabIdsToMove, { windowId: currentWindow.id, index: -1 });
+            for (const sourceWindowId of sourceWindowIds) {
+                try {
+                    const windowGroups = await chrome.tabGroups.query({ windowId: sourceWindowId });
+                    for (const group of windowGroups) {
+                        try {
+                            await chrome.tabGroups.move(group.id, { windowId: currentWindow.id, index: -1 });
+                        } catch (groupError) {
+                            console.error('Failed to move Chrome group in popup:', groupError);
+                        }
+                    }
+                } catch (groupQueryError) {
+                    console.error('Failed to query groups for window while gathering:', sourceWindowId, groupQueryError);
+                }
+            }
+
+            if (tabsToMove.length > 0) {
+                const tabIdsToMove = tabsToMove.map(tab => tab.id);
+                await chrome.tabs.move(tabIdsToMove, { windowId: currentWindow.id, index: -1 });
+            }
             renderUI();
+        } catch (e) {
+            console.error('Failed to consolidate windows in popup:', e);
         }
     });
 
     sortBtn.addEventListener('click', async () => {
-        const currentWindowId = (await chrome.windows.getCurrent()).id;
-        const tabsInWindow = await chrome.tabs.query({ windowId: currentWindowId, pinned: false });
+        try {
+            const currentWindowId = (await chrome.windows.getCurrent()).id;
+            const tabsInWindow = await chrome.tabs.query({ windowId: currentWindowId, pinned: false });
+            const sortableTabs = tabsInWindow.filter(t => t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE && t.url);
+            if (sortableTabs.length < 2) return;
 
-        const sortableTabs = tabsInWindow.filter(t => t.groupId === -1);
-        if (sortableTabs.length < 2) return;
+            const firstSortableIndex = Math.min(...sortableTabs.map(t => t.index));
+            const sortedTabsById = sortableTabs
+                .slice()
+                .sort((a, b) => {
+                    const aHost = getTabBucketLabel(a.url);
+                    const bHost = getTabBucketLabel(b.url);
+                    if (!aHost && !bHost) return 0;
+                    if (!aHost) return 1;
+                    if (!bHost) return -1;
+                    return aHost.localeCompare(bHost);
+                })
+                .map(t => t.id);
 
-        const firstSortableIndex = Math.min(...sortableTabs.map(t => t.index));
-
-        const sortedTabsById = sortableTabs
-            .sort((a, b) => {
-                try { return new URL(a.url).hostname.localeCompare(new URL(b.url).hostname); }
-                catch { return 0; }
-            })
-            .map(t => t.id);
-
-        await chrome.tabs.move(sortedTabsById, { index: firstSortableIndex });
-        renderUI();
+            await chrome.tabs.move(sortedTabsById, { index: firstSortableIndex });
+            renderUI();
+        } catch (e) {
+            console.error('Failed to sort tabs in popup:', e);
+        }
     });
 
     dedupeBtn.addEventListener('click', async () => {
@@ -428,43 +516,65 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 
     autoGroupBtn.addEventListener('click', async () => {
-        const isAllTabsView = viewToggle.checked;
-        const queryInfo = isAllTabsView ? {} : { currentWindow: true, groupId: chrome.tabGroups.TAB_GROUP_ID_NONE };
-        const tabsToGroup = await chrome.tabs.query(queryInfo);
+        try {
+            const currentWindowId = (await chrome.windows.getCurrent()).id;
+            const tabsToGroup = await chrome.tabs.query({
+                windowId: viewToggle.checked ? undefined : currentWindowId,
+                groupId: chrome.tabGroups.TAB_GROUP_ID_NONE
+            });
 
-        const tabsByDomain = groupTabsByDomain(tabsToGroup);
+            const tabsByWindow = tabsToGroup.reduce((acc, tab) => {
+                if (!acc[tab.windowId]) acc[tab.windowId] = [];
+                acc[tab.windowId].push(tab);
+                return acc;
+            }, {});
 
-        for (const domain in tabsByDomain) {
-            const tabs = tabsByDomain[domain];
-            if (tabs.length > 1) {
-                const tabIds = tabs.map(t => t.id);
-                const newGroupId = await chrome.tabs.group({ tabIds: tabIds });
-                await chrome.tabGroups.update(newGroupId, { title: domain });
+            for (const windowId of Object.keys(tabsByWindow)) {
+                const tabsByDomain = groupTabsByDomain(tabsByWindow[windowId]);
+                for (const domain of Object.keys(tabsByDomain)) {
+                    const tabs = tabsByDomain[domain];
+                    if (tabs.length > 1) {
+                        const tabIds = tabs.map(t => t.id);
+                        const newGroupId = await chrome.tabs.group({ tabIds: tabIds });
+                        await chrome.tabGroups.update(newGroupId, { title: domain });
+                    }
+                }
             }
+            renderUI();
+        } catch (e) {
+            console.error('Failed to auto-group tabs:', e);
         }
-        renderUI();
     });
 
     smartGroupBtn.addEventListener('click', async () => {
-        const settings = await chrome.storage.local.get(['advancedMode', 'groupAliases']);
-        const allTabs = await chrome.tabs.query({});
-        const grouped = groupTabsByCustomRules(allTabs, settings.groupAliases || '');
+        try {
+            const settings = await chrome.storage.local.get(['groupAliases']);
+            const currentWindowId = (await chrome.windows.getCurrent()).id;
+            const allTabs = await chrome.tabs.query({
+                windowId: viewToggle.checked ? undefined : currentWindowId,
+                groupId: chrome.tabGroups.TAB_GROUP_ID_NONE
+            });
+            const grouped = groupTabsByCustomRules(allTabs, settings.groupAliases || '');
 
-        for (const [groupName, tabs] of Object.entries(grouped)) {
-            if (tabs.length > 1) {
-                const tabIds = tabs.map(t => t.id);
-                const newGroupId = await chrome.tabs.group({ tabIds: tabIds });
-                await chrome.tabGroups.update(newGroupId, { title: groupName });
+            for (const [groupName, tabs] of Object.entries(grouped)) {
+                if (tabs.length > 1) {
+                    const tabIds = tabs.map(t => t.id);
+                    const newGroupId = await chrome.tabs.group({ tabIds: tabIds });
+                    await chrome.tabGroups.update(newGroupId, { title: groupName });
+                }
             }
-        }
 
-        renderUI();
+            renderUI();
+        } catch (e) {
+            console.error('Failed to smart-group tabs:', e);
+        }
     });
 
-    toggleAllBtn.addEventListener('click', () => {
+    toggleAllBtn.addEventListener('click', async () => {
         const allCollapsible = document.querySelectorAll('.group.collapsible');
-        const anyOpen = [...allCollapsible].some(el => el.classList.contains('open'));
-        allCollapsible.forEach(group => group.classList.toggle('open', !anyOpen));
+        const shouldOpen = ![...allCollapsible].some(el => el.classList.contains('open'));
+        allCollapsible.forEach(group => group.classList.toggle('open', shouldOpen));
+        await chrome.storage.local.set({ expandAll: shouldOpen });
     });
 
     searchInput.addEventListener('input', (e) => {
@@ -516,7 +626,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const aliases = parseGroupAliasText(rawText);
         const groups = {};
 
-        for (const [groupName, patterns] of Object.entries(aliases)) {
+        for (const [groupName] of Object.entries(aliases)) {
             groups[groupName] = [];
         }
 
@@ -525,9 +635,12 @@ document.addEventListener('DOMContentLoaded', () => {
             const hostname = safeHostname(tab.url);
             if (!hostname) continue;
 
+            let matched = false;
             for (const [groupName, patterns] of Object.entries(aliases)) {
+                if (matched) break;
                 if (patterns.some(pattern => matchesAlias(hostname, pattern))) {
                     groups[groupName].push(tab);
+                    matched = true;
                 }
             }
         }
@@ -564,22 +677,20 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function groupTabsByDomain(tabs) {
         return tabs.reduce((acc, tab) => {
-            if (tab.url && (tab.url.startsWith('http:') || tab.url.startsWith('https:'))) {
-                try {
-                    const domain = safeHostname(tab.url);
-                    if (domain) {
-                        if (!acc[domain]) acc[domain] = [];
-                        acc[domain].push(tab);
-                    }
-                } catch (e) { }
-            }
+            const label = tab.url && (tab.url.startsWith('http:') || tab.url.startsWith('https:'))
+                ? safeHostname(tab.url)
+                : getTabBucketLabel(tab.url);
+
+            if (!label) return acc;
+            if (!acc[label]) acc[label] = [];
+            acc[label].push(tab);
             return acc;
         }, {});
     }
 
     function safeHostname(url) {
         try {
-            return new URL(url).hostname.replace(/^www\./, '');
+            return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
         } catch {
             return '';
         }
@@ -589,12 +700,14 @@ document.addEventListener('DOMContentLoaded', () => {
         try {
             const domain = new URL(url).hostname;
             return `https://t2.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&url=http://${domain}&size=16`;
-        } catch { return 'icons/icon16.png'; }
+        } catch {
+            return 'icons/icon16.png';
+        }
     }
 
     async function initialize() {
         try {
-            const data = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode']);
+            const data = await chrome.storage.local.get(['viewModeAllTabs', 'advancedMode', 'expandAll']);
             viewToggle.checked = data.viewModeAllTabs !== false;
             if (smartGroupBtn) smartGroupBtn.classList.toggle('hidden', data.advancedMode !== true);
             if (saveGroupsBtn) saveGroupsBtn.classList.toggle('hidden', data.advancedMode !== true);

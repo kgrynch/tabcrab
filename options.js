@@ -27,12 +27,13 @@ const restoreOptions = () => {
         {
             showTabCount: true,
             advancedMode: false,
-            groupAliases: DEFAULT_GROUP_ALIASES
+            groupAliases: ''
         },
         (items) => {
             document.getElementById('show-tab-count').checked = items.showTabCount;
             document.getElementById('advanced-mode').checked = items.advancedMode;
-            document.getElementById('group-aliases').value = items.groupAliases || DEFAULT_GROUP_ALIASES;
+            document.getElementById('group-aliases').value = items.groupAliases || '';
+            document.getElementById('group-aliases').placeholder = DEFAULT_GROUP_ALIASES;
         }
     );
 };

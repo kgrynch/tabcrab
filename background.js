@@ -1,113 +1,127 @@
 // --- Tab Count Badge Logic ---
 
-// Function to update the badge
 const updateBadge = async () => {
     try {
         const settings = await chrome.storage.local.get(['showTabCount']);
         if (settings.showTabCount) {
             const tabs = await chrome.tabs.query({});
             chrome.action.setBadgeText({ text: tabs.length.toString() });
-            // Optional: Set a color for the badge
             chrome.action.setBadgeBackgroundColor({ color: '#0e7490' });
         } else {
             chrome.action.setBadgeText({ text: '' });
         }
     } catch (e) {
-        console.error("Error updating badge:", e);
+        console.error('Error updating badge:', e);
     }
 };
 
-// Update the badge when a tab is created, removed, or the extension starts
 chrome.tabs.onCreated.addListener(updateBadge);
 chrome.tabs.onRemoved.addListener(updateBadge);
 chrome.runtime.onStartup.addListener(updateBadge);
 
-// Also update when a setting is changed in the options page
 chrome.storage.onChanged.addListener((changes, namespace) => {
     if (namespace === 'local' && changes.showTabCount) {
         updateBadge();
     }
 });
 
-// Initial update
 updateBadge();
 
-// --- Keyboard Shortcut (Commands) Logic ---
-
 chrome.commands.onCommand.addListener(async (command) => {
-    if (command === "consolidate-windows") {
+    if (command === 'consolidate-windows') {
         await consolidateWindows();
-    } else if (command === "sort-tabs") {
+    } else if (command === 'sort-tabs') {
         await sortTabsInCurrentWindow();
     }
 });
 
-async function sortTabsInCurrentWindow() {
+function getTabBucketLabel(url) {
     try {
-        const currentWindowId = (await chrome.windows.getCurrent()).id;
-        await sortUngroupedTabsInWindow(currentWindowId);
-    } catch (e) {
-        console.error("Failed to sort tabs:", e);
+        const parsed = new URL(url);
+        if (parsed.protocol === 'http:' || parsed.protocol === 'https:') {
+            return parsed.hostname.replace(/^www\./, '').toLowerCase();
+        }
+
+        const scheme = (parsed.protocol || '').replace(/:$/, '') || 'Other';
+        if (scheme === 'chrome') return 'Chrome pages';
+        if (scheme === 'chrome-extension') return 'Extensions';
+        if (scheme === 'file') return 'File pages';
+        if (scheme === 'about') return 'About pages';
+        return `${scheme.charAt(0).toUpperCase()}${scheme.slice(1)} pages`;
+    } catch {
+        return 'Other pages';
     }
 }
 
-async function sortUngroupedTabsInWindow(windowId) {
-    const tabsInWindow = await chrome.tabs.query({ windowId, pinned: false });
-    const sortableTabs = tabsInWindow.filter(t => t.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE && t.url);
-    if (sortableTabs.length < 2) return;
-
-    const firstSortableIndex = Math.min(...sortableTabs.map(t => t.index));
-    const sortedTabsById = sortableTabs
-        .slice()
-        .sort((a, b) => {
-            const aHost = safeHostname(a.url);
-            const bHost = safeHostname(b.url);
-            if (!aHost && !bHost) return 0;
-            if (!aHost) return 1;
-            if (!bHost) return -1;
-            return aHost.localeCompare(bHost);
-        })
-        .map(t => t.id);
-
-    await chrome.tabs.move(sortedTabsById, { index: firstSortableIndex });
-}
-
-function safeHostname(url) {
+async function moveTabsToWindow(targetWindowId) {
     try {
-        return new URL(url).hostname.replace(/^www\./, '').toLowerCase();
-    } catch {
-        return '';
+        const allTabs = await chrome.tabs.query({});
+        const sourceWindowIds = new Set(allTabs.filter(tab => tab.windowId !== targetWindowId).map(tab => tab.windowId));
+
+        for (const sourceWindowId of sourceWindowIds) {
+            try {
+                const groups = await chrome.tabGroups.query({ windowId: sourceWindowId });
+                for (const group of groups) {
+                    try {
+                        await chrome.tabGroups.move(group.id, { windowId: targetWindowId, index: -1 });
+                    } catch (groupError) {
+                        console.error('Failed to move Chrome group:', groupError);
+                    }
+                }
+            } catch (windowError) {
+                console.error('Failed to query tab groups for source window:', sourceWindowId, windowError);
+            }
+        }
+
+        const remainingTabs = allTabs.filter(tab => tab.windowId !== targetWindowId && tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE);
+        if (remainingTabs.length > 0) {
+            const tabIdsToMove = remainingTabs.map(tab => tab.id);
+            try {
+                await chrome.tabs.move(tabIdsToMove, { windowId: targetWindowId, index: -1 });
+            } catch (moveError) {
+                console.error('Failed to move remaining tabs:', moveError);
+            }
+        }
+    } catch (e) {
+        console.error('Failed to consolidate windows:', e);
     }
 }
 
 async function consolidateWindows() {
     try {
         const currentWindow = await chrome.windows.getCurrent();
-        const allTabs = await chrome.tabs.query({});
-        const tabsToMove = allTabs.filter(tab => tab.windowId !== currentWindow.id && tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE);
-
-        const otherWindows = [...new Set(allTabs.filter(tab => tab.windowId !== currentWindow.id).map(tab => tab.windowId))];
-
-        for (const sourceWindowId of otherWindows) {
-            try {
-                const windowGroups = await chrome.tabGroups.query({ windowId: sourceWindowId });
-                for (const group of windowGroups) {
-                    try {
-                        await chrome.tabGroups.move(group.id, { windowId: currentWindow.id, index: -1 });
-                    } catch (groupError) {
-                        console.error('Failed to move Chrome group:', groupError);
-                    }
-                }
-            } catch (e) {
-                console.error('Failed to query groups for window:', sourceWindowId, e);
-            }
-        }
-
-        if (tabsToMove.length > 0) {
-            const tabIdsToMove = tabsToMove.map(tab => tab.id);
-            await chrome.tabs.move(tabIdsToMove, { windowId: currentWindow.id, index: -1 });
-        }
+        await moveTabsToWindow(currentWindow.id);
     } catch (e) {
-        console.error("Failed to consolidate windows:", e);
+        console.error('Failed to consolidate windows:', e);
+    }
+}
+
+async function sortUngroupedTabsInWindow(windowId) {
+    const tabsInWindow = await chrome.tabs.query({ windowId, pinned: false });
+    const sortableTabs = tabsInWindow.filter(tab => tab.groupId === chrome.tabGroups.TAB_GROUP_ID_NONE && tab.url);
+    if (sortableTabs.length < 2) return;
+
+    const firstSortableIndex = Math.min(...sortableTabs.map(tab => tab.index));
+    const sortedTabsById = sortableTabs
+        .slice()
+        .sort((a, b) => {
+            const aHost = getTabBucketLabel(a.url);
+            const bHost = getTabBucketLabel(b.url);
+            if (!aHost && !bHost) return 0;
+            if (!aHost) return 1;
+            if (!bHost) return -1;
+            return aHost.localeCompare(bHost);
+        })
+        .map(tab => tab.id);
+
+    await chrome.tabs.move(sortedTabsById, { index: firstSortableIndex });
+}
+
+async function sortTabsInCurrentWindow() {
+    try {
+        const currentWindowId = (await chrome.windows.getCurrent()).id;
+        await sortUngroupedTabsInWindow(currentWindowId);
+    } catch (e) {
+        console.error('Failed to sort tabs:', e);
     }
 }
