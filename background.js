@@ -85,7 +85,8 @@ const reuseExistingExactUrlTab = async (newTab) => {
         const settings = await chrome.storage.local.get([
             'duplicateTabReuseEnabled',
             'duplicateTabReuseMode',
-            'duplicateTabReuseSites'
+            'duplicateTabReuseSites',
+            'duplicateTabReuseGroupedBehavior'
         ]);
         if (!isDuplicateReuseAllowed(url, settings)) return;
 
@@ -98,21 +99,50 @@ const reuseExistingExactUrlTab = async (newTab) => {
             })[0];
         if (!duplicate) return;
 
-        // The newly opened tab marks the intended window and approximate
-        // position. Ungroup the reused tab so moving one tab does not move its
-        // entire Chrome tab group along with it.
+        const groupedBehavior = settings.duplicateTabReuseGroupedBehavior === 'pull-out'
+            ? 'pull-out'
+            : 'focus-in-place';
+
+        if (
+            duplicate.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE &&
+            groupedBehavior === 'focus-in-place'
+        ) {
+            try {
+                await chrome.tabs.remove(newTabId);
+            } catch (removeError) {
+                // The user may have closed the new tab before this check completed.
+                if (removeError?.message) console.warn('Could not close the duplicate tab:', removeError.message);
+            }
+
+            await chrome.tabs.update(duplicate.id, { active: true });
+            await chrome.windows.update(duplicate.windowId, { focused: true });
+            return;
+        }
+
+        // For ungrouped duplicates, and grouped duplicates in pull-out mode,
+        // move the existing tab to the new tab's position and window.
         if (duplicate.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
-            await chrome.tabs.ungroup(duplicate.id);
+            try {
+                await chrome.tabs.ungroup(duplicate.id);
+            } catch (ungroupError) {
+                console.error('Failed to ungroup duplicate tab:', ungroupError);
+                return;
+            }
         }
 
         let targetIndex = newTab.index;
         if (duplicate.windowId === newTab.windowId && duplicate.index < newTab.index) {
             targetIndex -= 1;
         }
-        await chrome.tabs.move(duplicate.id, {
-            windowId: newTab.windowId,
-            index: Math.max(0, targetIndex)
-        });
+        try {
+            await chrome.tabs.move(duplicate.id, {
+                windowId: newTab.windowId,
+                index: Math.max(0, targetIndex)
+            });
+        } catch (moveError) {
+            console.error('Failed to move duplicate tab:', moveError);
+            return;
+        }
 
         try {
             await chrome.tabs.remove(newTabId);
