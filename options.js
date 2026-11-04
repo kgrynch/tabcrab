@@ -8,9 +8,12 @@ const saveOptions = () => {
     const showTabCount = document.getElementById('show-tab-count').checked;
     const advancedMode = document.getElementById('advanced-mode').checked;
     const groupAliases = document.getElementById('group-aliases').value;
+    const duplicateTabReuseEnabled = document.getElementById('duplicate-tab-reuse-enabled').checked;
+    const duplicateTabReuseMode = document.getElementById('duplicate-tab-reuse-mode').value;
+    const duplicateTabReuseSites = document.getElementById('duplicate-tab-reuse-sites').value;
 
     chrome.storage.local.set(
-        { showTabCount, advancedMode, groupAliases },
+        { showTabCount, advancedMode, groupAliases, duplicateTabReuseEnabled, duplicateTabReuseMode, duplicateTabReuseSites },
         () => {
             const status = document.getElementById('status');
             status.textContent = 'Options saved!';
@@ -27,13 +30,19 @@ const restoreOptions = () => {
         {
             showTabCount: true,
             advancedMode: false,
-            groupAliases: ''
+            groupAliases: '',
+            duplicateTabReuseEnabled: false,
+            duplicateTabReuseMode: 'all-except',
+            duplicateTabReuseSites: ''
         },
         (items) => {
             document.getElementById('show-tab-count').checked = items.showTabCount;
             document.getElementById('advanced-mode').checked = items.advancedMode;
             document.getElementById('group-aliases').value = items.groupAliases || '';
             document.getElementById('group-aliases').placeholder = DEFAULT_GROUP_ALIASES;
+            document.getElementById('duplicate-tab-reuse-enabled').checked = items.duplicateTabReuseEnabled === true;
+            document.getElementById('duplicate-tab-reuse-mode').value = items.duplicateTabReuseMode || 'all-except';
+            document.getElementById('duplicate-tab-reuse-sites').value = items.duplicateTabReuseSites || '';
         }
     );
 };
@@ -42,3 +51,6 @@ document.addEventListener('DOMContentLoaded', restoreOptions);
 document.getElementById('show-tab-count').addEventListener('change', saveOptions);
 document.getElementById('advanced-mode').addEventListener('change', saveOptions);
 document.getElementById('group-aliases').addEventListener('input', saveOptions);
+document.getElementById('duplicate-tab-reuse-enabled').addEventListener('change', saveOptions);
+document.getElementById('duplicate-tab-reuse-mode').addEventListener('change', saveOptions);
+document.getElementById('duplicate-tab-reuse-sites').addEventListener('input', saveOptions);

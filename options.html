@@ -28,18 +28,35 @@
             </div>
 
             <div>
+                <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Duplicate Tab Reuse</h2>
+                <label class="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-50 cursor-pointer">
+                    <input type="checkbox" id="duplicate-tab-reuse-enabled" class="h-5 w-5 rounded border-gray-300 text-cyan-600 focus:ring-cyan-500">
+                    <span class="text-slate-700">Reuse an already-open tab when the exact same URL is opened</span>
+                </label>
+                <p class="text-slate-600 mb-3 text-sm">When enabled, the existing tab is moved to the new tab's window and position, focused, and the new duplicate is closed. Only exact HTTP/HTTPS URL matches are considered.</p>
+                <label for="duplicate-tab-reuse-mode" class="block text-sm font-medium text-slate-700 mb-1">Apply to sites</label>
+                <select id="duplicate-tab-reuse-mode" class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none text-sm">
+                    <option value="all-except">All sites except those listed</option>
+                    <option value="only-listed">Only the listed sites</option>
+                </select>
+                <label for="duplicate-tab-reuse-sites" class="block text-sm font-medium text-slate-700 mt-3 mb-1">Sites (one domain per line)</label>
+                <textarea id="duplicate-tab-reuse-sites" rows="4" placeholder="example.com&#10;*.example.org&#10;# comments are ignored" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none text-sm"></textarea>
+                <p class="text-slate-500 mt-1 text-xs">Domains also match their subdomains. In the default “all except” mode, leave this blank to apply to every eligible site.</p>
+            </div>
+
+            <div>
                 <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Smart Group Rules</h2>
                 <p class="text-slate-600 mb-3 text-sm">
                     Define custom group aliases. One line per group, using:
                     <code class="bg-slate-200 px-1 py-0.5 rounded">Group Name = domain1.com, domain2.com, *.example.com</code>
                 </p>
-                <textarea id="group-aliases" rows="8" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none text-sm" placeholder="Formative = app.formative.com, goformative.com"></textarea>
+                <textarea id="group-aliases" rows="8" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none text-sm"></textarea>
             </div>
 
             <div>
                 <h2 class="text-lg font-semibold text-cyan-800 border-b-2 border-cyan-100 pb-2 mb-4">Keyboard Shortcuts</h2>
                 <p class="text-slate-600 mb-3">
-                    You can manage these shortcuts by navigating to 
+                    You can manage these shortcuts by navigating to
                     <a href="chrome://extensions/shortcuts" target="_blank" class="text-cyan-600 hover:underline font-medium">chrome://extensions/shortcuts</a>.
                 </p>
                 <div class="text-sm text-slate-700 space-y-2">

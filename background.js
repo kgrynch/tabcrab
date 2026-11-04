@@ -27,6 +27,128 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 updateBadge();
 
+// Only tabs created while this service worker is active are considered. The
+// created-tab ID is retained until its initial URL is available, so later
+// navigations in existing tabs are not intercepted.
+const tabsAwaitingInitialUrl = new Set();
+const duplicateChecksInProgress = new Set();
+
+const getHttpUrl = (tab) => {
+    const url = tab?.pendingUrl || tab?.url || '';
+    return /^https?:\/\//i.test(url) ? url : '';
+};
+
+const getHostname = (url) => {
+    try {
+        return new URL(url).hostname.toLowerCase().replace(/^www\./, '');
+    } catch {
+        return '';
+    }
+};
+
+const getSitePatterns = (rawText = '') => (rawText || '')
+    .split(/\r?\n/)
+    .map(line => line.trim().toLowerCase())
+    .filter(line => line && !line.startsWith('#'))
+    .map(line => {
+        const wildcard = line.startsWith('*.');
+        const value = wildcard ? line.slice(2) : line;
+        try {
+            const hostname = new URL(value.includes('://') ? value : `https://${value}`).hostname;
+            return hostname.toLowerCase().replace(/^www\./, '');
+        } catch {
+            return '';
+        }
+    })
+    .filter(Boolean);
+
+const isDuplicateReuseAllowed = (url, settings) => {
+    if (settings.duplicateTabReuseEnabled !== true) return false;
+
+    const hostname = getHostname(url);
+    if (!hostname) return false;
+
+    const patterns = getSitePatterns(settings.duplicateTabReuseSites);
+    const hasMatch = patterns.some(pattern => hostname === pattern || hostname.endsWith(`.${pattern}`));
+    return settings.duplicateTabReuseMode === 'only-listed' ? hasMatch : !hasMatch;
+};
+
+const reuseExistingExactUrlTab = async (newTab) => {
+    const newTabId = newTab?.id;
+    if (newTabId == null || duplicateChecksInProgress.has(newTabId)) return;
+
+    const url = getHttpUrl(newTab);
+    if (!url) return;
+
+    duplicateChecksInProgress.add(newTabId);
+    try {
+        const settings = await chrome.storage.local.get([
+            'duplicateTabReuseEnabled',
+            'duplicateTabReuseMode',
+            'duplicateTabReuseSites'
+        ]);
+        if (!isDuplicateReuseAllowed(url, settings)) return;
+
+        const allTabs = await chrome.tabs.query({});
+        const duplicate = allTabs
+            .filter(tab => tab.id !== newTabId && (tab.url || tab.pendingUrl) === url)
+            .sort((a, b) => {
+                if (a.active !== b.active) return a.active ? -1 : 1;
+                return (b.lastAccessed || 0) - (a.lastAccessed || 0);
+            })[0];
+        if (!duplicate) return;
+
+        // The newly opened tab marks the intended window and approximate
+        // position. Ungroup the reused tab so moving one tab does not move its
+        // entire Chrome tab group along with it.
+        if (duplicate.groupId !== chrome.tabGroups.TAB_GROUP_ID_NONE) {
+            await chrome.tabs.ungroup(duplicate.id);
+        }
+
+        let targetIndex = newTab.index;
+        if (duplicate.windowId === newTab.windowId && duplicate.index < newTab.index) {
+            targetIndex -= 1;
+        }
+        await chrome.tabs.move(duplicate.id, {
+            windowId: newTab.windowId,
+            index: Math.max(0, targetIndex)
+        });
+
+        try {
+            await chrome.tabs.remove(newTabId);
+        } catch (removeError) {
+            // The user may have closed the newly created tab before the move completed.
+            if (removeError?.message) console.warn('Could not close the duplicate tab:', removeError.message);
+        }
+
+        await chrome.tabs.update(duplicate.id, { active: true });
+        await chrome.windows.update(newTab.windowId, { focused: true });
+    } catch (e) {
+        console.error('Failed to reuse an already-open exact-URL tab:', e);
+    } finally {
+        tabsAwaitingInitialUrl.delete(newTabId);
+        duplicateChecksInProgress.delete(newTabId);
+    }
+};
+
+chrome.tabs.onCreated.addListener((tab) => {
+    if (tab?.id == null) return;
+    tabsAwaitingInitialUrl.add(tab.id);
+    if (getHttpUrl(tab)) reuseExistingExactUrlTab(tab);
+});
+
+chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+    if (!tabsAwaitingInitialUrl.has(tabId)) return;
+    if (changeInfo.url || changeInfo.status === 'complete' || getHttpUrl(tab)) {
+        reuseExistingExactUrlTab(tab);
+    }
+});
+
+chrome.tabs.onRemoved.addListener((tabId) => {
+    tabsAwaitingInitialUrl.delete(tabId);
+    duplicateChecksInProgress.delete(tabId);
+});
+
 chrome.commands.onCommand.addListener(async (command) => {
     if (command === 'consolidate-windows') {
         await consolidateWindows();
