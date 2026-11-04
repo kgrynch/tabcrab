@@ -28,13 +28,26 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 updateBadge();
 
 // Track new tabs until their initial URL is available. The navigation-target
-// listener below also catches links opened with target="_blank" or equivalent.
+// listener also catches links opened with target="_blank" or equivalent.
 const tabsAwaitingInitialUrl = new Set();
 const duplicateChecksInProgress = new Set();
 
 const getHttpUrl = (tab) => {
     const url = tab?.pendingUrl || tab?.url || '';
     return /^https?:\/\//i.test(url) ? url : '';
+};
+
+// Treat URLs as duplicates only when every part except the fragment matches.
+// This keeps query strings and paths significant while ignoring #section.
+const getUrlWithoutFragment = (url) => {
+    try {
+        const parsed = new URL(url);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return '';
+        parsed.hash = '';
+        return parsed.href;
+    } catch {
+        return '';
+    }
 };
 
 const getHostname = (url) => {
@@ -87,7 +100,8 @@ const reuseExistingExactUrlTab = async (newTabId, requestedUrl = '') => {
         // For link-created tabs use the exact URL reported by Chrome's
         // navigation-target event; otherwise use the tab's initial URL.
         const url = /^https?:\/\//i.test(requestedUrl) ? requestedUrl : getHttpUrl(newTab);
-        if (!url) return;
+        const comparisonUrl = getUrlWithoutFragment(url);
+        if (!comparisonUrl) return;
 
         const settings = await chrome.storage.local.get([
             'duplicateTabReuseEnabled',
@@ -98,12 +112,23 @@ const reuseExistingExactUrlTab = async (newTabId, requestedUrl = '') => {
 
         const allTabs = await chrome.tabs.query({});
         const duplicate = allTabs
-            .filter(tab => tab.id !== newTabId && (tab.url || tab.pendingUrl) === url)
+            .filter(tab => tab.id !== newTabId && getUrlWithoutFragment(tab.url || tab.pendingUrl || '') === comparisonUrl)
             .sort((a, b) => {
                 if (a.active !== b.active) return a.active ? -1 : 1;
                 return (b.lastAccessed || 0) - (a.lastAccessed || 0);
             })[0];
         if (!duplicate) return;
+
+        // If only the fragment differs, apply the newly requested fragment to
+        // the reused tab so the link still opens at its intended section.
+        const existingUrl = duplicate.url || duplicate.pendingUrl || '';
+        try {
+            if (new URL(existingUrl).hash !== new URL(url).hash) {
+                await chrome.tabs.update(duplicate.id, { url });
+            }
+        } catch {
+            // The matching helper already validated both URLs; continue safely.
+        }
 
         // The newly opened tab marks the intended window and approximate
         // position. Ungroup the reused tab so moving one tab does not move its
