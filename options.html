@@ -42,6 +42,11 @@
                 <label for="duplicate-tab-reuse-sites" class="block text-sm font-medium text-slate-700 mt-3 mb-1">Sites (one domain per line)</label>
                 <textarea id="duplicate-tab-reuse-sites" rows="4" placeholder="example.com&#10;*.example.org&#10;# comments are ignored" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none text-sm"></textarea>
                 <p class="text-slate-500 mt-1 text-xs">Domains also match their subdomains. In the default “all except” mode, leave this blank to apply to every eligible site.</p>
+                <label for="duplicate-tab-reuse-grouped-behavior" class="block text-sm font-medium text-slate-700 mt-3 mb-1">If the existing tab is in a Chrome tab group</label>
+                <select id="duplicate-tab-reuse-grouped-behavior" disabled class="w-full p-2 bg-slate-50 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 outline-none text-sm">
+                    <option value="focus-in-place">Focus it where it is (keep it in the group)</option>
+                    <option value="pull-out">Pull it out of the group and move it here</option>
+                </select>
             </div>
 
             <div>
