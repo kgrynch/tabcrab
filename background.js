@@ -27,9 +27,8 @@ chrome.storage.onChanged.addListener((changes, namespace) => {
 
 updateBadge();
 
-// Only tabs created while this service worker is active are considered. The
-// created-tab ID is retained until its initial URL is available, so later
-// navigations in existing tabs are not intercepted.
+// Track new tabs until their initial URL is available. The navigation-target
+// listener below also catches links opened with target="_blank" or equivalent.
 const tabsAwaitingInitialUrl = new Set();
 const duplicateChecksInProgress = new Set();
 
@@ -73,15 +72,23 @@ const isDuplicateReuseAllowed = (url, settings) => {
     return settings.duplicateTabReuseMode === 'only-listed' ? hasMatch : !hasMatch;
 };
 
-const reuseExistingExactUrlTab = async (newTab) => {
-    const newTabId = newTab?.id;
+const reuseExistingExactUrlTab = async (newTabId, requestedUrl = '') => {
     if (newTabId == null || duplicateChecksInProgress.has(newTabId)) return;
-
-    const url = getHttpUrl(newTab);
-    if (!url) return;
 
     duplicateChecksInProgress.add(newTabId);
     try {
+        let newTab;
+        try {
+            newTab = await chrome.tabs.get(newTabId);
+        } catch {
+            return;
+        }
+
+        // For link-created tabs use the exact URL reported by Chrome's
+        // navigation-target event; otherwise use the tab's initial URL.
+        const url = /^https?:\/\//i.test(requestedUrl) ? requestedUrl : getHttpUrl(newTab);
+        if (!url) return;
+
         const settings = await chrome.storage.local.get([
             'duplicateTabReuseEnabled',
             'duplicateTabReuseMode',
@@ -134,14 +141,22 @@ const reuseExistingExactUrlTab = async (newTab) => {
 chrome.tabs.onCreated.addListener((tab) => {
     if (tab?.id == null) return;
     tabsAwaitingInitialUrl.add(tab.id);
-    if (getHttpUrl(tab)) reuseExistingExactUrlTab(tab);
+    if (getHttpUrl(tab)) reuseExistingExactUrlTab(tab.id);
 });
 
-chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
+chrome.tabs.onUpdated.addListener((tabId, changeInfo) => {
     if (!tabsAwaitingInitialUrl.has(tabId)) return;
-    if (changeInfo.url || changeInfo.status === 'complete' || getHttpUrl(tab)) {
-        reuseExistingExactUrlTab(tab);
+    if (changeInfo.url || changeInfo.status === 'complete') {
+        reuseExistingExactUrlTab(tabId, changeInfo.url || '');
     }
+});
+
+// This event specifically identifies a new tab opened by following a link,
+// including target="_blank" links where onCreated may initially expose no URL.
+chrome.webNavigation.onCreatedNavigationTarget.addListener((details) => {
+    if (details.tabId == null || !/^https?:\/\//i.test(details.url || '')) return;
+    tabsAwaitingInitialUrl.add(details.tabId);
+    reuseExistingExactUrlTab(details.tabId, details.url);
 });
 
 chrome.tabs.onRemoved.addListener((tabId) => {
