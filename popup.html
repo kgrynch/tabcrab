@@ -7,6 +7,13 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            width: min(600px, 100vw);
+            max-width: 100vw;
+            box-sizing: border-box;
+        }
+    </style>
 </head>
 <body class="w-[440px] h-[500px] bg-slate-50 font-sans text-slate-800">
     <div class="flex flex-col h-full">
@@ -66,6 +73,13 @@
                         <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 7.6 19.4l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.4 14.6 1.65 1.65 0 0 0 2.89 13.1H2.8a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.4 7.4a1.65 1.65 0 0 0 .33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9.4 2.6a1.65 1.65 0 0 0 1.51-1H11a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15.4 4.4a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9.4a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15.4Z"/>
                     </svg>
                 </a>
+                <button id="save-groups-btn" title="Save the current groups for later" class="action-btn-text hidden"><span>Save</span></button>
+                <button id="smart-group-btn" title="Apply saved smart-group rules" class="action-btn-text hidden"><span>Apply Rules</span></button>
+                <button id="auto-group-btn" title="Automatically create tab groups by domain" class="action-btn-text"><span>Group</span></button>
+                <button id="dedupe-btn" title="Close duplicate tabs" class="action-btn-text"><span>Dedupe</span></button>
+                <button id="sort-btn" title="Sort tabs in current window" class="action-btn-text"><span>Sort</span></button>
+                <button id="consolidate-btn" title="Bring all tabs to this window" class="action-btn-text"><span>Gather</span></button>
+                <a href="options.html" target="_blank" title="Open Settings" class="action-btn ml-1" aria-label="Open Settings">⚙</a>
             </div>
             <div class="flex items-center space-x-2">
                 <div class="relative flex-grow">
@@ -82,6 +96,7 @@
                         <path d="M4 18h16"/>
                     </svg>
                 </button>
+                <button id="toggle-all-btn" title="Expand/Collapse All Groups" class="action-btn" aria-label="Expand or collapse all groups">☰</button>
                 <div class="toggle-container">
                     <span class="toggle-label">Current</span>
                     <label class="toggle-switch-label">
