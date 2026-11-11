@@ -63,14 +63,14 @@
                 <a href="options.html" target="_blank" title="Open Settings" class="action-btn ml-1">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                         <circle cx="12" cy="12" r="3"/>
-                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9.8 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.6 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.6a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15.2 4.6a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9c.39.14.66.5.66.99V10a2 2 0 0 1 0 4h-.09c-.49 0-.85.27-.99.66Z"/>
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 7.6 19.4l-.06-.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.4 14.6 1.65 1.65 0 0 0 2.89 13.1H2.8a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.4 7.4a1.65 1.65 0 0 0 .33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9.4 2.6a1.65 1.65 0 0 0 1.51-1H11a2 2 0 0 1 4 0v.09A1.65 1.65 0 0 0 15.4 4.4a1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9.4a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09A1.65 1.65 0 0 0 19.4 15.4Z"/>
                     </svg>
                 </a>
             </div>
             <div class="flex items-center space-x-2">
                 <div class="relative flex-grow">
                     <input type="search" id="search-input" placeholder="Find a tab..." class="w-full pl-9 pr-4 py-1 text-sm bg-slate-100 border border-slate-200 rounded-lg focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 outline-none">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
                         <circle cx="11" cy="11" r="7"/>
                         <path d="M21 21l-4.35-4.35"/>
                     </svg>
@@ -94,8 +94,8 @@
         </header>
         <div class="flex-grow p-3 overflow-y-auto main-scroll">
             <div id="native-groups-list" class="group-stack"></div>
-            <div id="saved-groups-list" class="group-stack hidden"></div>
             <div id="tab-list" class="group-stack"></div>
+            <div id="saved-groups-list" class="group-stack hidden"></div>
             <div id="empty-state" class="hidden text-center text-slate-500 py-10">
                 <p class="font-medium">The beach is clear!</p>
                 <p class="text-sm">No open tabs found.</p>
