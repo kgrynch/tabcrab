@@ -1,6 +1,6 @@
 // Saves options to chrome.storage
 const DEFAULT_GROUP_ALIASES = `# Example aliases (one group per line)
-# Format: Group Name = domain1.com, domain2.com, *.domain3.com
+# Format: Group Name = domain1.com, domain2.com, *.domain3.com, custom.example.com/seats
 Formative = app.formative.com, goformative.com
 Learning = app.canvas.com, *.instructure.com`;
 
