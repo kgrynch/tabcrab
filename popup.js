@@ -638,7 +638,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let matched = false;
             for (const [groupName, patterns] of Object.entries(aliases)) {
                 if (matched) break;
-                if (patterns.some(pattern => matchesAlias(hostname, pattern))) {
+                if (patterns.some(pattern => matchesAlias(tab.url, pattern))) {
                     groups[groupName].push(tab);
                     matched = true;
                 }
@@ -648,18 +648,60 @@ document.addEventListener('DOMContentLoaded', () => {
         return Object.fromEntries(Object.entries(groups).filter(([, tabsForGroup]) => tabsForGroup.length > 0));
     }
 
-    function matchesAlias(hostname, pattern) {
-        const normalizedHostname = normalizeHostname(hostname);
-        const normalizedPattern = normalizeHostname(pattern);
+    function matchesAlias(url, pattern) {
+        const tab = parseAliasTarget(url);
+        const rule = parseAliasTarget(pattern);
+
+        if (!tab || !rule) return false;
+        if (!matchPatternString(tab.host, rule.host)) return false;
+
+        if (!rule.path || rule.path === '/') {
+            return true;
+        }
+
+        if (rule.path.includes('*')) {
+            return matchPatternString(tab.path, rule.path);
+        }
+
+        return tab.path === rule.path || tab.path.startsWith(`${rule.path}/`);
+    }
+
+    function parseAliasTarget(value) {
+        const trimmed = (value || '').trim();
+        if (!trimmed) return null;
+
+        const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+
+        try {
+            const parsed = new URL(withScheme);
+            return {
+                host: parsed.hostname.replace(/^www\./i, '').toLowerCase(),
+                path: (parsed.pathname || '/').replace(/\/+$/, '') || '/'
+            };
+        } catch {
+            const raw = trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$|\s+$/g, '');
+            const slashIndex = raw.indexOf('/');
+            const host = slashIndex >= 0 ? raw.slice(0, slashIndex) : raw;
+            const path = slashIndex >= 0 ? raw.slice(slashIndex) || '/' : '/';
+            return {
+                host: host.toLowerCase(),
+                path: path.replace(/\/+$/, '') || '/'
+            };
+        }
+    }
+
+    function matchPatternString(value, pattern) {
+        const normalizedValue = (value || '').toLowerCase();
+        const normalizedPattern = (pattern || '').toLowerCase();
 
         if (!normalizedPattern) return false;
 
         if (normalizedPattern.includes('*')) {
             const regex = new RegExp('^' + normalizedPattern.split('*').map(escapeRegex).join('.*') + '$');
-            return regex.test(normalizedHostname);
+            return regex.test(normalizedValue);
         }
 
-        return normalizedHostname === normalizedPattern || normalizedHostname.endsWith(`.${normalizedPattern}`);
+        return normalizedValue === normalizedPattern || normalizedValue.endsWith(`.${normalizedPattern}`);
     }
 
     function normalizeHostname(value) {
