@@ -13,13 +13,29 @@ document.addEventListener('DOMContentLoaded', () => {
     const smartGroupBtn = document.getElementById('smart-group-btn');
     const saveGroupsBtn = document.getElementById('save-groups-btn');
 
+    const normalizeSavedGroupKey = (group = {}) => {
+        const name = (group.name || '').trim().toLowerCase();
+        const urls = (group.memberUrls || []).slice().sort().join('|');
+        return `${name}|${urls}`;
+    };
+
+    const dedupeSavedGroups = (groups = []) => {
+        const seen = new Map();
+        for (const group of groups) {
+            if (!group || !group.name) continue;
+            const key = normalizeSavedGroupKey(group);
+            if (!seen.has(key)) seen.set(key, group);
+        }
+        return [...seen.values()];
+    };
+
     const getSavedGroups = async () => {
         const { savedTabGroups = [] } = await chrome.storage.local.get(['savedTabGroups']);
-        return savedTabGroups;
+        return dedupeSavedGroups(savedTabGroups).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
     };
 
     const setSavedGroups = async (groups) => {
-        await chrome.storage.local.set({ savedTabGroups: groups });
+        await chrome.storage.local.set({ savedTabGroups: dedupeSavedGroups(groups) });
     };
 
     const buildSavedGroupFromTabs = (name, tabs) => ({
@@ -51,13 +67,18 @@ document.addEventListener('DOMContentLoaded', () => {
     };
 
     const renderSavedGroups = async (allTabs) => {
-        const savedGroups = await getSavedGroups();
+        const savedGroups = (await getSavedGroups())
+            .map(group => ({
+                ...group,
+                tabs: allTabs.filter(tab => tab && tab.url && group.memberUrls.includes(tab.url))
+            }))
+            .filter(group => group.tabs.length > 0);
+
         savedGroupsContainer.innerHTML = '';
         savedGroupsContainer.classList.toggle('hidden', savedGroups.length === 0);
 
         for (const group of savedGroups) {
-            const groupTabs = allTabs.filter(tab => tab && tab.url && group.memberUrls.includes(tab.url));
-
+            const groupTabs = group.tabs;
             const groupEl = document.createElement('div');
             groupEl.className = 'group bg-cyan-50 rounded-lg shadow-sm overflow-hidden collapsible open';
 
@@ -113,15 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
             const items = document.createElement('div');
             items.className = 'tab-items';
-
-            if (groupTabs.length === 0) {
-                const empty = document.createElement('div');
-                empty.className = 'p-2 text-xs text-slate-500';
-                empty.textContent = 'No matching tabs are open right now.';
-                items.appendChild(empty);
-            } else {
-                groupTabs.forEach(tab => items.appendChild(createTabItem(tab, false)));
-            }
+            groupTabs.forEach(tab => items.appendChild(createTabItem(tab, false)));
 
             groupEl.appendChild(header);
             groupEl.appendChild(items);
@@ -429,7 +442,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const existing = await getSavedGroups();
-        const merged = [...existing, ...groups].filter(Boolean);
+        const merged = dedupeSavedGroups([...existing, ...groups]);
         await setSavedGroups(merged);
         renderUI();
     });
@@ -638,7 +651,7 @@ document.addEventListener('DOMContentLoaded', () => {
             let matched = false;
             for (const [groupName, patterns] of Object.entries(aliases)) {
                 if (matched) break;
-                if (patterns.some(pattern => matchesAlias(tab.url, pattern))) {
+                if (patterns.some(pattern => matchesAlias(hostname, pattern))) {
                     groups[groupName].push(tab);
                     matched = true;
                 }
@@ -648,60 +661,18 @@ document.addEventListener('DOMContentLoaded', () => {
         return Object.fromEntries(Object.entries(groups).filter(([, tabsForGroup]) => tabsForGroup.length > 0));
     }
 
-    function matchesAlias(url, pattern) {
-        const tab = parseAliasTarget(url);
-        const rule = parseAliasTarget(pattern);
-
-        if (!tab || !rule) return false;
-        if (!matchPatternString(tab.host, rule.host)) return false;
-
-        if (!rule.path || rule.path === '/') {
-            return true;
-        }
-
-        if (rule.path.includes('*')) {
-            return matchPatternString(tab.path, rule.path);
-        }
-
-        return tab.path === rule.path || tab.path.startsWith(`${rule.path}/`);
-    }
-
-    function parseAliasTarget(value) {
-        const trimmed = (value || '').trim();
-        if (!trimmed) return null;
-
-        const withScheme = /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
-
-        try {
-            const parsed = new URL(withScheme);
-            return {
-                host: parsed.hostname.replace(/^www\./i, '').toLowerCase(),
-                path: (parsed.pathname || '/').replace(/\/+$/, '') || '/'
-            };
-        } catch {
-            const raw = trimmed.replace(/^https?:\/\//i, '').replace(/^www\./i, '').replace(/\/+$|\s+$/g, '');
-            const slashIndex = raw.indexOf('/');
-            const host = slashIndex >= 0 ? raw.slice(0, slashIndex) : raw;
-            const path = slashIndex >= 0 ? raw.slice(slashIndex) || '/' : '/';
-            return {
-                host: host.toLowerCase(),
-                path: path.replace(/\/+$/, '') || '/'
-            };
-        }
-    }
-
-    function matchPatternString(value, pattern) {
-        const normalizedValue = (value || '').toLowerCase();
-        const normalizedPattern = (pattern || '').toLowerCase();
+    function matchesAlias(hostname, pattern) {
+        const normalizedHostname = normalizeHostname(hostname);
+        const normalizedPattern = normalizeHostname(pattern);
 
         if (!normalizedPattern) return false;
 
         if (normalizedPattern.includes('*')) {
             const regex = new RegExp('^' + normalizedPattern.split('*').map(escapeRegex).join('.*') + '$');
-            return regex.test(normalizedValue);
+            return regex.test(normalizedHostname);
         }
 
-        return normalizedValue === normalizedPattern || normalizedValue.endsWith(`.${normalizedPattern}`);
+        return normalizedHostname === normalizedPattern || normalizedHostname.endsWith(`.${normalizedPattern}`);
     }
 
     function normalizeHostname(value) {
